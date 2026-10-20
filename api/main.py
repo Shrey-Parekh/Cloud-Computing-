@@ -121,13 +121,20 @@ class SuggestRequest(BaseModel):
     train_ratio: float = Field(0.8, ge=0.6, le=0.9)
 
 
+# One model fit at a time: small hosts (Render free: 512 MB, 0.1 CPU) run out of
+# memory or stall when the warm-up fit and visitor requests fit in parallel.
+# Requests that arrive during a fit wait, then usually hit the cache.
+_fit_lock = threading.Lock()
+
+
 def run(req: RunRequest):
     if req.mode not in (MODE_ONE_STEP, MODE_MULTI_STEP):
         raise HTTPException(422, f"Unknown mode {req.mode!r}.")
     _, _, version = load_data(refresh=req.refresh)
     try:
-        return _run(version, (req.p, req.d, req.q), round(req.train_ratio, 2),
-                    req.mode, req.horizon)
+        with _fit_lock:
+            return _run(version, (req.p, req.d, req.q), round(req.train_ratio, 2),
+                        req.mode, req.horizon)
     except (ArimaError, EvaluationError) as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -166,7 +173,8 @@ def suggest(req: SuggestRequest):
     df, _, _ = load_data()
     try:
         train, _ = split_train_test(to_series(df), req.train_ratio)
-        best, table = suggest_order(train)
+        with _fit_lock:
+            best, table = suggest_order(train)
     except ArimaError as exc:
         raise HTTPException(422, str(exc)) from exc
     return {"order": list(best), "candidates": table.head(10).to_dict(orient="records")}
