@@ -1,0 +1,33 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Temporary file written while data/workload.csv is being saved
+data/*.tmp
+
+# Frontend (web/.gitignore covers the rest)
+web/node_modules/
+web/dist/
+web/.vercel/
+.vercel/
+
+# Logs
+*.log
+
+# Editor, OS and local tool settings
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
